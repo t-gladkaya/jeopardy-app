@@ -1,10 +1,29 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { createDefaultTeams, saveTeams, Team } from '../../data/teams'
+import { resetCompletedClues } from '../../data/drafts'
+import { createDefaultTeams, getTeams, saveTeams, Team } from '../../data/teams'
+
+const getInitialTeams = () => {
+  const savedTeams = getTeams()
+  return savedTeams.length > 0 ? savedTeams : createDefaultTeams()
+}
 
 function TeamSetupPage() {
   const navigate = useNavigate()
-  const [teams, setTeams] = useState<Team[]>(createDefaultTeams)
+  const [teams, setTeams] = useState<Team[]>(getInitialTeams)
+  const [isScoreReset, setIsScoreReset] = useState(false)
+
+  useEffect(() => {
+    if (!isScoreReset) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsScoreReset(false)
+    }, 1800)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [isScoreReset])
 
   const handleTeamNameChange = (teamId: string, name: string) => {
     setTeams((currentTeams) =>
@@ -27,6 +46,18 @@ function TeamSetupPage() {
     setTeams((currentTeams) => currentTeams.filter((team) => team.id !== teamId))
   }
 
+  const handleResetScores = () => {
+    const nextTeams = teams.map((team) => ({
+      ...team,
+      score: 0,
+    }))
+
+    setTeams(nextTeams)
+    saveTeams(nextTeams)
+    resetCompletedClues()
+    setIsScoreReset(true)
+  }
+
   const handleStartRound = () => {
     const normalizedTeams = teams.map((team, index) => ({
       ...team,
@@ -34,7 +65,7 @@ function TeamSetupPage() {
     }))
 
     saveTeams(normalizedTeams)
-    navigate('/game/round-1')
+    navigate('/game/round/1')
   }
 
   return (
@@ -45,9 +76,18 @@ function TeamSetupPage() {
             Назад
           </Link>
 
-          <button className="save-draft-button" type="button" onClick={handleStartRound}>
-            Далее
-          </button>
+          <div className="draft-actions">
+            <button
+              className={`delete-draft-button reset-score-button${isScoreReset ? ' is-confirmed' : ''}`}
+              type="button"
+              onClick={handleResetScores}
+            >
+              {isScoreReset ? 'Счёт сброшен' : 'Сбросить счёт'}
+            </button>
+            <button className="save-draft-button" type="button" onClick={handleStartRound}>
+              Далее
+            </button>
+          </div>
         </header>
 
         <div className="teams-content">

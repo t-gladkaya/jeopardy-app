@@ -11,6 +11,7 @@ function AppRouter() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/teams" element={<TeamSetupPage />} />
       <Route path="/game/round-1" element={<RoundPage />} />
+      <Route path="/game/round/:roundNumber" element={<RoundPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/admin/create" element={<CreateGamePage />} />
       <Route path="/admin/create/:draftId" element={<CreateGamePage />} />

@@ -21,6 +21,7 @@ export const CLUE_LEVELS: ClueLevel[] = [100, 200, 300, 400, 500]
 export const CATEGORY_COUNT = 5
 
 const STORAGE_KEY = 'jeopardy-game-drafts'
+const COMPLETED_CLUES_STORAGE_PREFIX = 'jeopardy-completed-clues-'
 
 export const createDefaultCategories = () => {
   return Array.from({ length: CATEGORY_COUNT }, () => '')
@@ -163,4 +164,15 @@ export const saveDraft = (draft: Omit<GameDraft, 'createdAt' | 'id' | 'updatedAt
 export const deleteDraft = (draftId: string) => {
   const nextDrafts = getDrafts().filter((draft) => draft.id !== draftId)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(nextDrafts))
+  localStorage.removeItem(`${COMPLETED_CLUES_STORAGE_PREFIX}${draftId}`)
+}
+
+export const getCompletedCluesStorageKey = (draftId: string) => {
+  return `${COMPLETED_CLUES_STORAGE_PREFIX}${draftId}`
+}
+
+export const resetCompletedClues = () => {
+  getDrafts().forEach((draft) => {
+    localStorage.removeItem(getCompletedCluesStorageKey(draft.id))
+  })
 }
