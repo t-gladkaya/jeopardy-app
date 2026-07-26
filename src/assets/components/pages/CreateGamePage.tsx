@@ -3,7 +3,6 @@ import type { ChangeEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   CLUE_LEVELS,
-  ClueLevel,
   createDefaultCategories,
   createEmptyClue,
   deleteDraft,
@@ -14,20 +13,23 @@ import {
   isClueFilled,
   saveDraft,
 } from '../../data/drafts'
-import type { ClueDraft } from '../../data/drafts'
+import type { ClueDraft, ClueLevel } from '../../data/drafts'
 import { deleteQuestionMedia, uploadQuestionMedia } from '../../data/media'
 
 function CreateGamePage() {
   const { draftId } = useParams()
   const navigate = useNavigate()
   const [currentDraftId, setCurrentDraftId] = useState<string | undefined>(draftId)
-  const [title, setTitle] = useState(getNextDraftTitle)
+  const [title, setTitle] = useState('Раунд')
   const [categories, setCategories] = useState(createDefaultCategories)
   const [clues, setClues] = useState<Record<string, ClueDraft>>({})
   const [selectedCategoryIndex, setSelectedCategoryIndex] = useState(0)
   const [selectedLevel, setSelectedLevel] = useState<ClueLevel>(100)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [isMediaUploading, setIsMediaUploading] = useState(false)
   const [mediaError, setMediaError] = useState('')
+  const [pageError, setPageError] = useState('')
 
   const selectedClueKey = useMemo(
     () => getClueKey(selectedCategoryIndex, selectedLevel),
@@ -41,29 +43,42 @@ function CreateGamePage() {
       : 'Содержимое пока не заполнено'
 
   useEffect(() => {
-    if (!draftId) {
-      setCurrentDraftId(undefined)
-      setTitle(getNextDraftTitle())
-      setCategories(createDefaultCategories())
-      setClues({})
-      setSelectedCategoryIndex(0)
-      setSelectedLevel(100)
-      return
+    const loadDraft = async () => {
+      setIsLoading(true)
+      setPageError('')
+
+      try {
+        if (!draftId) {
+          setCurrentDraftId(undefined)
+          setTitle(await getNextDraftTitle())
+          setCategories(createDefaultCategories())
+          setClues({})
+          setSelectedCategoryIndex(0)
+          setSelectedLevel(100)
+          return
+        }
+
+        const savedDraft = await getDraftById(draftId)
+
+        if (!savedDraft) {
+          navigate('/admin', { replace: true })
+          return
+        }
+
+        setCurrentDraftId(savedDraft.id)
+        setTitle(savedDraft.title)
+        setCategories(savedDraft.categories)
+        setClues(savedDraft.clues)
+        setSelectedCategoryIndex(0)
+        setSelectedLevel(100)
+      } catch (error) {
+        setPageError(error instanceof Error ? error.message : 'Не удалось загрузить драфт.')
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    const savedDraft = getDraftById(draftId)
-
-    if (!savedDraft) {
-      navigate('/admin', { replace: true })
-      return
-    }
-
-    setCurrentDraftId(savedDraft.id)
-    setTitle(savedDraft.title)
-    setCategories(savedDraft.categories)
-    setClues(savedDraft.clues)
-    setSelectedCategoryIndex(0)
-    setSelectedLevel(100)
+    void loadDraft()
   }, [draftId, navigate])
 
   useEffect(() => {
@@ -121,25 +136,38 @@ function CreateGamePage() {
     })
   }
 
-  const handleSaveDraft = () => {
-    const savedDraft = saveDraft({
-      categories,
-      clues,
-      content: draftSummary,
-      id: currentDraftId,
-      title,
-    })
+  const handleSaveDraft = async () => {
+    setIsSaving(true)
+    setPageError('')
 
-    setCurrentDraftId(savedDraft.id)
-    navigate('/admin')
+    try {
+      const savedDraft = await saveDraft({
+        categories,
+        clues,
+        content: draftSummary,
+        id: currentDraftId,
+        title,
+      })
+
+      setCurrentDraftId(savedDraft.id)
+      navigate('/admin')
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : 'Не удалось сохранить драфт.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const handleDeleteDraft = () => {
-    if (currentDraftId) {
-      deleteDraft(currentDraftId)
-    }
+  const handleDeleteDraft = async () => {
+    try {
+      if (currentDraftId) {
+        await deleteDraft(currentDraftId)
+      }
 
-    navigate('/admin')
+      navigate('/admin')
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : 'Не удалось удалить драфт.')
+    }
   }
 
   return (
@@ -151,10 +179,15 @@ function CreateGamePage() {
           </Link>
 
           <div className="draft-actions">
-            <button className="save-draft-button" type="button" onClick={handleSaveDraft}>
-              Сохранить драфт
+            <button
+              className="save-draft-button"
+              disabled={isSaving || isLoading}
+              type="button"
+              onClick={() => void handleSaveDraft()}
+            >
+              {isSaving ? 'Сохранение...' : 'Сохранить драфт'}
             </button>
-            <button className="delete-draft-button" type="button" onClick={handleDeleteDraft}>
+            <button className="delete-draft-button" type="button" onClick={() => void handleDeleteDraft()}>
               Удалить драфт
             </button>
           </div>
@@ -162,96 +195,99 @@ function CreateGamePage() {
 
         <div className="create-content">
           <p className="landing-kicker">Конструктор</p>
-          <h1 id="create-title">{title}</h1>
+          <h1 id="create-title">{isLoading ? 'Загрузка...' : title}</h1>
+          {pageError && <p className="media-error">{pageError}</p>}
 
-          <section className="jeopardy-builder" aria-label="Конструктор игрового поля">
-            <div className="builder-board">
-              <div className="category-row">
-                {categories.map((category, categoryIndex) => (
-                  <label className="category-input" key={categoryIndex}>
-                    <input
-                      aria-label={getCategoryPlaceholder(categoryIndex)}
-                      placeholder={getCategoryPlaceholder(categoryIndex)}
-                      value={category}
-                      onChange={(event) => handleCategoryChange(categoryIndex, event.target.value)}
-                    />
-                  </label>
-                ))}
+          {!isLoading && !pageError && (
+            <section className="jeopardy-builder" aria-label="Конструктор игрового поля">
+              <div className="builder-board">
+                <div className="category-row">
+                  {categories.map((category, categoryIndex) => (
+                    <label className="category-input" key={categoryIndex}>
+                      <input
+                        aria-label={getCategoryPlaceholder(categoryIndex)}
+                        placeholder={getCategoryPlaceholder(categoryIndex)}
+                        value={category}
+                        onChange={(event) => handleCategoryChange(categoryIndex, event.target.value)}
+                      />
+                    </label>
+                  ))}
+                </div>
+
+                <div className="levels-grid">
+                  {CLUE_LEVELS.flatMap((level) =>
+                    categories.map((_, categoryIndex) => {
+                      const clueKey = getClueKey(categoryIndex, level)
+                      const isSelected = selectedCategoryIndex === categoryIndex && selectedLevel === level
+                      const isFilled = isClueFilled(clues[clueKey])
+
+                      return (
+                        <button
+                          className={`level-tile${isSelected ? ' selected' : ''}${isFilled ? ' filled' : ''}`}
+                          key={clueKey}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategoryIndex(categoryIndex)
+                            setSelectedLevel(level)
+                          }}
+                        >
+                          {level}
+                        </button>
+                      )
+                    }),
+                  )}
+                </div>
               </div>
 
-              <div className="levels-grid">
-                {CLUE_LEVELS.flatMap((level) =>
-                  categories.map((_, categoryIndex) => {
-                    const clueKey = getClueKey(categoryIndex, level)
-                    const isSelected = selectedCategoryIndex === categoryIndex && selectedLevel === level
-                    const isFilled = isClueFilled(clues[clueKey])
-
-                    return (
-                      <button
-                        className={`level-tile${isSelected ? ' selected' : ''}${isFilled ? ' filled' : ''}`}
-                        key={clueKey}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCategoryIndex(categoryIndex)
-                          setSelectedLevel(level)
-                        }}
-                      >
-                        {level}
-                      </button>
-                    )
-                  }),
-                )}
-              </div>
-            </div>
-
-            <aside className="clue-editor" aria-label="Редактор выбранного вопроса">
-              <span>
-                {categories[selectedCategoryIndex] || getCategoryPlaceholder(selectedCategoryIndex)} за{' '}
-                {selectedLevel}
-              </span>
-              <strong>Вопрос</strong>
-              <textarea
-                value={selectedClue.question}
-                onChange={(event) => updateSelectedClue({ question: event.target.value })}
-                placeholder="Напишите текст вопроса для выбранной клетки"
-              />
-
-              <label className="clue-answer-field">
-                <span>Правильный ответ</span>
-                <input
-                  value={selectedClue.answer}
-                  onChange={(event) => updateSelectedClue({ answer: event.target.value })}
-                  placeholder="Например: Александр Пушкин"
+              <aside className="clue-editor" aria-label="Редактор выбранного вопроса">
+                <span>
+                  {categories[selectedCategoryIndex] || getCategoryPlaceholder(selectedCategoryIndex)} за{' '}
+                  {selectedLevel}
+                </span>
+                <strong>Вопрос</strong>
+                <textarea
+                  value={selectedClue.question}
+                  onChange={(event) => updateSelectedClue({ question: event.target.value })}
+                  placeholder="Напишите текст вопроса для выбранной клетки"
                 />
-              </label>
 
-              <div className="media-uploader">
-                <label className={`media-upload-button${isMediaUploading ? ' is-uploading' : ''}`}>
-                  {isMediaUploading ? 'Загрузка...' : 'Добавить изображение'}
+                <label className="clue-answer-field">
+                  <span>Правильный ответ</span>
                   <input
-                    accept="image/*"
-                    disabled={isMediaUploading}
-                    type="file"
-                    onChange={handleMediaChange}
+                    value={selectedClue.answer}
+                    onChange={(event) => updateSelectedClue({ answer: event.target.value })}
+                    placeholder="Например: Александр Пушкин"
                   />
                 </label>
 
-                {mediaError && <p className="media-error">{mediaError}</p>}
+                <div className="media-uploader">
+                  <label className={`media-upload-button${isMediaUploading ? ' is-uploading' : ''}`}>
+                    {isMediaUploading ? 'Загрузка...' : 'Добавить изображение'}
+                    <input
+                      accept="image/*"
+                      disabled={isMediaUploading}
+                      type="file"
+                      onChange={handleMediaChange}
+                    />
+                  </label>
 
-                {selectedClue.mediaUrl && (
-                  <div className="media-preview">
-                    <img alt={selectedClue.mediaName || 'Медиа вопроса'} src={selectedClue.mediaUrl} />
-                    <div>
-                      <span>{selectedClue.mediaName}</span>
-                      <button type="button" onClick={handleRemoveMedia}>
-                        Удалить медиа
-                      </button>
+                  {mediaError && <p className="media-error">{mediaError}</p>}
+
+                  {selectedClue.mediaUrl && (
+                    <div className="media-preview">
+                      <img alt={selectedClue.mediaName || 'Медиа вопроса'} src={selectedClue.mediaUrl} />
+                      <div>
+                        <span>{selectedClue.mediaName}</span>
+                        <button type="button" onClick={() => void handleRemoveMedia()}>
+                          Удалить медиа
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            </aside>
-          </section>
+                  )}
+                </div>
+              </aside>
+            </section>
+          )}
         </div>
       </section>
     </main>

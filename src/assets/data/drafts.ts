@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase'
+
 export type ClueLevel = 100 | 200 | 300 | 400 | 500
 
 export type ClueDraft = {
@@ -18,11 +20,26 @@ export type GameDraft = {
   updatedAt: string
 }
 
+type DraftRow = {
+  categories: unknown
+  clues: unknown
+  content: string | null
+  created_at: string
+  id: string
+  title: string
+  updated_at: string
+}
+
 export const CLUE_LEVELS: ClueLevel[] = [100, 200, 300, 400, 500]
 export const CATEGORY_COUNT = 5
 
-const STORAGE_KEY = 'jeopardy-game-drafts'
-const COMPLETED_CLUES_STORAGE_PREFIX = 'jeopardy-completed-clues-'
+const requireSupabase = () => {
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.')
+  }
+
+  return supabase
+}
 
 export const createDefaultCategories = () => {
   return Array.from({ length: CATEGORY_COUNT }, () => '')
@@ -85,96 +102,134 @@ const normalizeClues = (value: unknown) => {
   )
 }
 
-const normalizeDraft = (value: unknown): GameDraft | null => {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-
-  const draft = value as Record<string, unknown>
-
-  if (
-    typeof draft.createdAt !== 'string' ||
-    typeof draft.id !== 'string' ||
-    typeof draft.title !== 'string' ||
-    typeof draft.updatedAt !== 'string'
-  ) {
-    return null
-  }
-
+const mapDraftRow = (row: DraftRow): GameDraft => {
   const defaultCategories = createDefaultCategories()
-  const categories = isStringArray(draft.categories)
-    ? [...draft.categories, ...defaultCategories].slice(0, CATEGORY_COUNT)
+  const categories = isStringArray(row.categories)
+    ? [...row.categories, ...defaultCategories].slice(0, CATEGORY_COUNT)
     : defaultCategories
 
   return {
     categories,
-    clues: normalizeClues(draft.clues),
-    content: typeof draft.content === 'string' ? draft.content : '',
-    createdAt: draft.createdAt,
-    id: draft.id,
-    title: draft.title,
-    updatedAt: draft.updatedAt,
+    clues: normalizeClues(row.clues),
+    content: row.content ?? '',
+    createdAt: row.created_at,
+    id: row.id,
+    title: row.title,
+    updatedAt: row.updated_at,
   }
 }
 
-export const getDrafts = (): GameDraft[] => {
-  const rawDrafts = localStorage.getItem(STORAGE_KEY)
+export const getDrafts = async (): Promise<GameDraft[]> => {
+  const client = requireSupabase()
+  const { data, error } = await client
+    .from('game_drafts')
+    .select('id,title,content,categories,clues,created_at,updated_at')
+    .order('created_at', { ascending: true })
 
-  if (!rawDrafts) {
-    return []
+  if (error) {
+    throw error
   }
 
-  try {
-    const parsedDrafts: unknown = JSON.parse(rawDrafts)
-    return Array.isArray(parsedDrafts)
-      ? parsedDrafts.map(normalizeDraft).filter((draft): draft is GameDraft => Boolean(draft))
-      : []
-  } catch {
-    return []
+  return (data ?? []).map((row) => mapDraftRow(row as DraftRow))
+}
+
+export const getDraftById = async (draftId: string) => {
+  const client = requireSupabase()
+  const { data, error } = await client
+    .from('game_drafts')
+    .select('id,title,content,categories,clues,created_at,updated_at')
+    .eq('id', draftId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
   }
+
+  return data ? mapDraftRow(data as DraftRow) : undefined
 }
 
-export const getDraftById = (draftId: string) => {
-  return getDrafts().find((draft) => draft.id === draftId)
+export const getNextDraftTitle = async () => {
+  const drafts = await getDrafts()
+  return `Раунд ${drafts.length + 1}`
 }
 
-export const getNextDraftTitle = () => {
-  return `Раунд ${getDrafts().length + 1}`
-}
-
-export const saveDraft = (draft: Omit<GameDraft, 'createdAt' | 'id' | 'updatedAt'> & Partial<GameDraft>) => {
-  const drafts = getDrafts()
-  const now = new Date().toISOString()
-  const existingDraft = draft.id ? drafts.find((item) => item.id === draft.id) : undefined
-  const nextDraft: GameDraft = {
+export const saveDraft = async (
+  draft: Omit<GameDraft, 'createdAt' | 'id' | 'updatedAt'> & Partial<GameDraft>,
+) => {
+  const client = requireSupabase()
+  const payload = {
     categories: draft.categories ?? createDefaultCategories(),
     clues: draft.clues ?? {},
-    content: draft.content,
-    createdAt: existingDraft?.createdAt ?? now,
-    id: draft.id ?? crypto.randomUUID(),
+    content: draft.content ?? '',
     title: draft.title,
-    updatedAt: now,
+    updated_at: new Date().toISOString(),
   }
-  const nextDrafts = existingDraft
-    ? drafts.map((item) => (item.id === nextDraft.id ? nextDraft : item))
-    : [...drafts, nextDraft]
+  const query = draft.id
+    ? client.from('game_drafts').update(payload).eq('id', draft.id)
+    : client.from('game_drafts').insert(payload)
+  const { data, error } = await query
+    .select('id,title,content,categories,clues,created_at,updated_at')
+    .single()
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(nextDrafts))
-  return nextDraft
+  if (error) {
+    throw error
+  }
+
+  return mapDraftRow(data as DraftRow)
 }
 
-export const deleteDraft = (draftId: string) => {
-  const nextDrafts = getDrafts().filter((draft) => draft.id !== draftId)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(nextDrafts))
-  localStorage.removeItem(`${COMPLETED_CLUES_STORAGE_PREFIX}${draftId}`)
+export const deleteDraft = async (draftId: string) => {
+  const client = requireSupabase()
+  const { error } = await client.from('game_drafts').delete().eq('id', draftId)
+
+  if (error) {
+    throw error
+  }
 }
 
-export const getCompletedCluesStorageKey = (draftId: string) => {
-  return `${COMPLETED_CLUES_STORAGE_PREFIX}${draftId}`
+export const getCompletedClues = async (draftId: string) => {
+  const client = requireSupabase()
+  const { data, error } = await client
+    .from('completed_clues')
+    .select('clue_key')
+    .eq('draft_id', draftId)
+
+  if (error) {
+    throw error
+  }
+
+  return (data ?? []).map((item) => item.clue_key as string)
 }
 
-export const resetCompletedClues = () => {
-  getDrafts().forEach((draft) => {
-    localStorage.removeItem(getCompletedCluesStorageKey(draft.id))
-  })
+export const saveCompletedClues = async (draftId: string, completedClues: string[]) => {
+  const client = requireSupabase()
+  const { error: deleteError } = await client.from('completed_clues').delete().eq('draft_id', draftId)
+
+  if (deleteError) {
+    throw deleteError
+  }
+
+  if (completedClues.length === 0) {
+    return
+  }
+
+  const { error } = await client.from('completed_clues').insert(
+    completedClues.map((clueKey) => ({
+      clue_key: clueKey,
+      draft_id: draftId,
+    })),
+  )
+
+  if (error) {
+    throw error
+  }
+}
+
+export const resetCompletedClues = async () => {
+  const client = requireSupabase()
+  const { error } = await client.from('completed_clues').delete().not('draft_id', 'is', null)
+
+  if (error) {
+    throw error
+  }
 }

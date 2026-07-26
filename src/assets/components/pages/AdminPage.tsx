@@ -1,17 +1,32 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { deleteDraft, GameDraft, getDrafts } from '../../data/drafts'
+import { deleteDraft, getDrafts } from '../../data/drafts'
+import type { GameDraft } from '../../data/drafts'
 
 function AdminPage() {
   const [drafts, setDrafts] = useState<GameDraft[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const loadDrafts = async () => {
+    setError('')
+
+    try {
+      setDrafts(await getDrafts())
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить драфты.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    setDrafts(getDrafts())
+    void loadDrafts()
   }, [])
 
-  const handleDeleteDraft = (draftId: string) => {
-    deleteDraft(draftId)
-    setDrafts(getDrafts())
+  const handleDeleteDraft = async (draftId: string) => {
+    await deleteDraft(draftId)
+    await loadDrafts()
   }
 
   return (
@@ -34,33 +49,38 @@ function AdminPage() {
           )}
         </header>
 
-        <div className="games-grid" aria-label="Список игр">
-          {drafts.length > 0 ? (
-            drafts.map((draft) => (
-              <article className="game-card saved-card" key={draft.id}>
-                <Link className="game-card-link" to={`/admin/create/${draft.id}`}>
-                  <span>Драфт</span>
-                  <strong>{draft.title}</strong>
-                  <small>{draft.content || 'Содержимое пока не заполнено'}</small>
-                </Link>
+        {isLoading && <p className="media-error">Загрузка драфтов...</p>}
+        {error && <p className="media-error">{error}</p>}
 
-                <button
-                  className="delete-draft-button"
-                  type="button"
-                  onClick={() => handleDeleteDraft(draft.id)}
-                >
-                  Удалить драфт
-                </button>
-              </article>
-            ))
-          ) : (
-            <Link className="game-card create-card" to="/admin/create">
-              <span>Пока пусто</span>
-              <strong>Создать первую игру</strong>
-              <small>Нажмите, чтобы добавить новый драфт</small>
-            </Link>
-          )}
-        </div>
+        {!isLoading && !error && (
+          <div className="games-grid" aria-label="Список игр">
+            {drafts.length > 0 ? (
+              drafts.map((draft) => (
+                <article className="game-card saved-card" key={draft.id}>
+                  <Link className="game-card-link" to={`/admin/create/${draft.id}`}>
+                    <span>Драфт</span>
+                    <strong>{draft.title}</strong>
+                    <small>{draft.content || 'Содержимое пока не заполнено'}</small>
+                  </Link>
+
+                  <button
+                    className="delete-draft-button"
+                    type="button"
+                    onClick={() => void handleDeleteDraft(draft.id)}
+                  >
+                    Удалить драфт
+                  </button>
+                </article>
+              ))
+            ) : (
+              <Link className="game-card create-card" to="/admin/create">
+                <span>Пока пусто</span>
+                <strong>Создать первую игру</strong>
+                <small>Нажмите, чтобы добавить новый драфт</small>
+              </Link>
+            )}
+          </div>
+        )}
       </section>
     </main>
   )

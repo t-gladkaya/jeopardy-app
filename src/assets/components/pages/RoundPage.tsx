@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   CLUE_LEVELS,
-  ClueDraft,
-  ClueLevel,
   getCategoryPlaceholder,
   getClueKey,
-  getCompletedCluesStorageKey,
+  getCompletedClues,
   getDrafts,
+  saveCompletedClues,
 } from '../../data/drafts'
-import { getTeams, saveTeams, Team } from '../../data/teams'
+import type { ClueDraft, ClueLevel, GameDraft } from '../../data/drafts'
+import { createDefaultTeams, getTeams, saveTeamScores } from '../../data/teams'
+import type { Team } from '../../data/teams'
 
 type SelectedClue = {
   categoryIndex: number
@@ -17,39 +18,18 @@ type SelectedClue = {
   level: ClueLevel
 }
 
-const getCompletedClues = (draftId: string) => {
-  const rawCompletedClues = localStorage.getItem(getCompletedCluesStorageKey(draftId))
-
-  if (!rawCompletedClues) {
-    return []
-  }
-
-  try {
-    const parsedCompletedClues: unknown = JSON.parse(rawCompletedClues)
-    return Array.isArray(parsedCompletedClues)
-      ? parsedCompletedClues.filter((item): item is string => typeof item === 'string')
-      : []
-  } catch {
-    return []
-  }
-}
-
-const saveCompletedClues = (draftId: string, completedClues: string[]) => {
-  localStorage.setItem(getCompletedCluesStorageKey(draftId), JSON.stringify(completedClues))
-}
-
 function RoundPage() {
   const { roundNumber = '1' } = useParams()
   const navigate = useNavigate()
   const roundIndex = Math.max(Number(roundNumber) - 1, 0)
-  const drafts = useMemo(() => getDrafts(), [])
-  const draft = drafts[roundIndex]
-  const [teams, setTeams] = useState<Team[]>(getTeams)
-  const [completedClues, setCompletedClues] = useState<string[]>(() =>
-    draft ? getCompletedClues(draft.id) : [],
-  )
+  const [drafts, setDrafts] = useState<GameDraft[]>([])
+  const [draft, setDraft] = useState<GameDraft | undefined>()
+  const [teams, setTeams] = useState<Team[]>([])
+  const [completedClues, setCompletedClues] = useState<string[]>([])
   const [selectedClue, setSelectedClue] = useState<SelectedClue | null>(null)
   const [isAnswerVisible, setIsAnswerVisible] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
   const totalCluesCount = CLUE_LEVELS.length * (draft?.categories.length ?? 0)
   const isRoundComplete = Boolean(draft && completedClues.length >= totalCluesCount)
@@ -57,10 +37,32 @@ function RoundPage() {
   const hasNextRound = nextRoundNumber <= drafts.length
 
   useEffect(() => {
-    if (draft) {
-      setCompletedClues(getCompletedClues(draft.id))
+    const loadRound = async () => {
+      setIsLoading(true)
+      setError('')
+      setSelectedClue(null)
+      setCompletedClues([])
+
+      try {
+        const [savedDrafts, savedTeams] = await Promise.all([getDrafts(), getTeams()])
+        const currentDraft = savedDrafts[roundIndex]
+
+        setDrafts(savedDrafts)
+        setDraft(currentDraft)
+        setTeams(savedTeams.length > 0 ? savedTeams : createDefaultTeams())
+
+        if (currentDraft) {
+          setCompletedClues(await getCompletedClues(currentDraft.id))
+        }
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить раунд.')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [draft])
+
+    void loadRound()
+  }, [roundIndex])
 
   useEffect(() => {
     if (!selectedClue) {
@@ -78,9 +80,9 @@ function RoundPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedClue])
 
-  const updateTeams = (nextTeams: Team[]) => {
+  const updateTeams = async (nextTeams: Team[]) => {
     setTeams(nextTeams)
-    saveTeams(nextTeams)
+    await saveTeamScores(nextTeams)
   }
 
   const handleScoreChange = (teamId: string, score: string) => {
@@ -89,22 +91,23 @@ function RoundPage() {
       team.id === teamId ? { ...team, score: Number.isNaN(parsedScore) ? 0 : parsedScore } : team,
     )
 
-    updateTeams(nextTeams)
+    setTeams(nextTeams)
+    void saveTeamScores(nextTeams).catch((saveError) => {
+      setError(saveError instanceof Error ? saveError.message : 'Не удалось сохранить счет.')
+    })
   }
 
-  const markClueCompleted = (clueKey: string) => {
+  const markClueCompleted = async (clueKey: string) => {
     if (!draft) {
       return
     }
 
-    setCompletedClues((currentCompletedClues) => {
-      const nextCompletedClues = currentCompletedClues.includes(clueKey)
-        ? currentCompletedClues
-        : [...currentCompletedClues, clueKey]
+    const nextCompletedClues = completedClues.includes(clueKey)
+      ? completedClues
+      : [...completedClues, clueKey]
 
-      saveCompletedClues(draft.id, nextCompletedClues)
-      return nextCompletedClues
-    })
+    setCompletedClues(nextCompletedClues)
+    await saveCompletedClues(draft.id, nextCompletedClues)
   }
 
   const handleOpenClue = (categoryIndex: number, level: ClueLevel) => {
@@ -126,7 +129,7 @@ function RoundPage() {
     setIsAnswerVisible(false)
   }
 
-  const handleAwardPoints = (teamId: string) => {
+  const handleAwardPoints = async (teamId: string) => {
     if (!selectedClue) {
       return
     }
@@ -135,18 +138,37 @@ function RoundPage() {
       team.id === teamId ? { ...team, score: team.score + selectedClue.level } : team,
     )
 
-    updateTeams(nextTeams)
-    markClueCompleted(getClueKey(selectedClue.categoryIndex, selectedClue.level))
-    setSelectedClue(null)
+    try {
+      await updateTeams(nextTeams)
+      await markClueCompleted(getClueKey(selectedClue.categoryIndex, selectedClue.level))
+      setSelectedClue(null)
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Не удалось сохранить результат.')
+    }
   }
 
-  const handleSkipClue = () => {
+  const handleSkipClue = async () => {
     if (!selectedClue) {
       return
     }
 
-    markClueCompleted(getClueKey(selectedClue.categoryIndex, selectedClue.level))
-    setSelectedClue(null)
+    try {
+      await markClueCompleted(getClueKey(selectedClue.categoryIndex, selectedClue.level))
+      setSelectedClue(null)
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Не удалось сохранить ячейку.')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <main className="round-page">
+        <section className="round-empty-state" aria-labelledby="round-title">
+          <p className="landing-kicker">Загрузка</p>
+          <h1 id="round-title">Готовим раунд...</h1>
+        </section>
+      </main>
+    )
   }
 
   if (!draft) {
@@ -157,7 +179,8 @@ function RoundPage() {
             К драфтам
           </Link>
           <p className="landing-kicker">Раунд не найден</p>
-          <h1 id="round-title">Нет сохранённого драфта</h1>
+          <h1 id="round-title">Нет сохраненного драфта</h1>
+          {error && <p className="media-error">{error}</p>}
         </section>
       </main>
     )
@@ -188,7 +211,9 @@ function RoundPage() {
           )}
         </header>
 
-        <div className="round-scoreboard" aria-label="Счёт команд">
+        {error && <p className="media-error">{error}</p>}
+
+        <div className="round-scoreboard" aria-label="Счет команд">
           {teams.map((team) => (
             <label className="round-team-score" key={team.id}>
               <span>{team.name}</span>
@@ -272,12 +297,12 @@ function RoundPage() {
               <span>Начислить баллы</span>
               <div>
                 {teams.map((team) => (
-                  <button key={team.id} type="button" onClick={() => handleAwardPoints(team.id)}>
+                  <button key={team.id} type="button" onClick={() => void handleAwardPoints(team.id)}>
                     {team.name} +{selectedClue.level}
                   </button>
                 ))}
               </div>
-              <button className="skip-clue-button" type="button" onClick={handleSkipClue}>
+              <button className="skip-clue-button" type="button" onClick={() => void handleSkipClue()}>
                 Закрыть без баллов
               </button>
             </div>
