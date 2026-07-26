@@ -57,16 +57,38 @@ body {
   margin: 0;
   width: 100%;
   min-width: 100%;
-  height: 100%;
   min-height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+  scrollbar-color: rgba(255, 218, 102, 0.85) rgba(5, 13, 31, 0.92);
+  scrollbar-width: thin;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: rgba(5, 13, 31, 0.92);
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(5, 13, 31, 0.92);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff4a8, #ffbf2e);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #fff8c8, #ffd257);
 }
 
 #root {
-  width: 100vw;
-  height: 100svh;
+  width: 100%;
   min-height: 100svh;
-  overflow: hidden;
+  overflow-x: hidden;
   text-align: center;
   display: flex;
   flex-direction: column;

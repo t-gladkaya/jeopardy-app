@@ -9,6 +9,7 @@ function AppRouter() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/admin/create" element={<CreateGamePage />} />
+      <Route path="/admin/create/:draftId" element={<CreateGamePage />} />
     </Routes>
   )
 }

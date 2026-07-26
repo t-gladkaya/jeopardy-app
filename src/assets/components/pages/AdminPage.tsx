@@ -1,16 +1,18 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-type ExistingGame = {
-  id: string
-  rounds: number
-  status: string
-  title: string
-}
-
-const games: ExistingGame[] = []
+import { deleteDraft, GameDraft, getDrafts } from '../../data/drafts'
 
 function AdminPage() {
-  const hasGames = games.length > 0
+  const [drafts, setDrafts] = useState<GameDraft[]>([])
+
+  useEffect(() => {
+    setDrafts(getDrafts())
+  }, [])
+
+  const handleDeleteDraft = (draftId: string) => {
+    deleteDraft(draftId)
+    setDrafts(getDrafts())
+  }
 
   return (
     <main className="admin-page">
@@ -20,26 +22,42 @@ function AdminPage() {
             Назад
           </Link>
 
-          <div>
+          <div className="admin-title-block">
             <p className="landing-kicker">Админ-панель</p>
             <h1 id="admin-title">Созданные игры</h1>
           </div>
+
+          {drafts.length > 0 && (
+            <Link className="add-draft-link" to="/admin/create" aria-label="Создать новый драфт">
+              +
+            </Link>
+          )}
         </header>
 
         <div className="games-grid" aria-label="Список игр">
-          {hasGames ? (
-            games.map((game) => (
-              <button className="game-card" key={game.id} type="button">
-                <span>{game.status}</span>
-                <strong>{game.title}</strong>
-                <small>{game.rounds} раундов</small>
-              </button>
+          {drafts.length > 0 ? (
+            drafts.map((draft) => (
+              <article className="game-card saved-card" key={draft.id}>
+                <Link className="game-card-link" to={`/admin/create/${draft.id}`}>
+                  <span>Драфт</span>
+                  <strong>{draft.title}</strong>
+                  <small>{draft.content || 'Содержимое пока не заполнено'}</small>
+                </Link>
+
+                <button
+                  className="delete-draft-button"
+                  type="button"
+                  onClick={() => handleDeleteDraft(draft.id)}
+                >
+                  Удалить драфт
+                </button>
+              </article>
             ))
           ) : (
             <Link className="game-card create-card" to="/admin/create">
               <span>Пока пусто</span>
               <strong>Создать первую игру</strong>
-              <small>Перейти к будущему конструктору</small>
+              <small>Нажмите, чтобы добавить новый драфт</small>
             </Link>
           )}
         </div>
