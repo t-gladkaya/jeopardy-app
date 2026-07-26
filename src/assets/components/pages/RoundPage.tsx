@@ -47,7 +47,9 @@ function RoundPage() {
 
         setDrafts(savedDrafts)
         setDraft(currentDraft)
-        setTeams(savedTeams.length > 0 ? savedTeams : createDefaultTeams())
+        const nextTeams = savedTeams.length > 0 ? savedTeams : createDefaultTeams()
+
+        setTeams(nextTeams)
 
         if (currentDraft) {
           setCompletedClues(await getCompletedClues(currentDraft.id))
@@ -84,7 +86,11 @@ function RoundPage() {
   }
 
   const handleScoreChange = (teamId: string, score: string) => {
-    const parsedScore = Number(score)
+    if (!/^-?\d*$/.test(score)) {
+      return
+    }
+
+    const parsedScore = score === '' || score === '-' ? 0 : Number(score)
     const nextTeams = teams.map((team) =>
       team.id === teamId ? { ...team, score: Number.isNaN(parsedScore) ? 0 : parsedScore } : team,
     )
@@ -216,8 +222,9 @@ function RoundPage() {
               <input
                 aria-label={`Баллы команды ${team.name}`}
                 inputMode="numeric"
-                type="number"
-                value={team.score}
+                placeholder="0"
+                type="text"
+                value={team.score === 0 ? '' : team.score}
                 onChange={(event) => handleScoreChange(team.id, event.target.value)}
               />
             </label>
