@@ -78,7 +78,7 @@
 }
 
 .admin-shell {
-  width: min(100%, 980px);
+  width: min(100%, 1180px);
   display: grid;
   gap: clamp(18px, 3vh, 28px);
   padding: clamp(22px, 4vw, 44px);
@@ -366,6 +366,257 @@
   outline: none;
 }
 
+.draft-title-field {
+  max-width: 420px;
+}
+
+.jeopardy-builder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 16px;
+  align-items: start;
+}
+
+.builder-board {
+  align-self: start;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: #071026;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.24);
+}
+
+.category-row,
+.levels-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+}
+
+.category-input {
+  display: grid;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(9, 17, 40, 0.95);
+  background: linear-gradient(180deg, #183c98, #0d276e);
+}
+
+.category-input span {
+  color: #ffda66;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.category-input input {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  font: inherit;
+  font-size: clamp(0.82rem, 1.1vw, 1rem);
+  font-weight: 800;
+  text-align: center;
+}
+
+.category-input input::placeholder {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.category-input input:focus {
+  border-color: rgba(255, 218, 102, 0.85);
+  outline: none;
+}
+
+.level-tile {
+  display: grid;
+  place-items: center;
+  min-height: clamp(64px, 10vw, 92px);
+  border: 1px solid rgba(9, 17, 40, 0.95);
+  color: #ffd957;
+  background: linear-gradient(180deg, #163bb4, #08278a);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.4rem, 3vw, 2.6rem);
+  font-weight: 900;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.level-tile:hover,
+.level-tile:focus-visible {
+  outline: none;
+  background: linear-gradient(180deg, #2356db, #0b32aa);
+}
+
+.level-tile.selected {
+  box-shadow: inset 0 0 0 3px #ffda66;
+  color: #fff6bf;
+}
+
+.level-tile.filled::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #37d3be;
+  box-shadow: 0 0 12px rgba(55, 211, 190, 0.65);
+}
+
+.clue-editor {
+  align-self: start;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.clue-editor span {
+  color: #ffda66;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.clue-editor strong {
+  color: #ffffff;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1;
+}
+
+.clue-editor textarea {
+  width: 100%;
+  min-height: 150px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(5, 13, 31, 0.48);
+  font: inherit;
+  line-height: 1.4;
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+.clue-editor textarea:focus {
+  border-color: rgba(255, 218, 102, 0.8);
+  outline: none;
+}
+
+.clue-answer-field {
+  display: grid;
+  gap: 8px;
+  color: #d8e6ff;
+  font-weight: 800;
+}
+
+.clue-answer-field span {
+  color: #d8e6ff;
+  font-size: 0.9rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.clue-answer-field input {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(5, 13, 31, 0.48);
+  font: inherit;
+  padding: 0 12px;
+}
+
+.clue-answer-field input:focus {
+  border-color: rgba(255, 218, 102, 0.8);
+  outline: none;
+}
+
+.media-uploader {
+  display: grid;
+  gap: 10px;
+}
+
+.media-upload-button {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  border: 1px dashed rgba(255, 218, 102, 0.65);
+  border-radius: 8px;
+  color: #ffda66;
+  background: rgba(255, 218, 102, 0.08);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.media-upload-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.media-preview {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(5, 13, 31, 0.42);
+}
+
+.media-preview img {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.media-preview div {
+  display: grid;
+  gap: 8px;
+}
+
+.media-preview span {
+  color: #d8e6ff;
+  font-size: 0.86rem;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.media-preview button {
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(255, 86, 119, 0.16);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.media-preview button:hover,
+.media-preview button:focus-visible {
+  border-color: rgba(255, 143, 165, 0.8);
+  outline: none;
+}
+
 .brand-mark {
   display: grid;
   place-items: center;
@@ -501,6 +752,19 @@
 
   .games-grid {
     grid-template-columns: 1fr;
+  }
+
+  .jeopardy-builder {
+    grid-template-columns: 1fr;
+  }
+
+  .builder-board {
+    overflow-x: auto;
+  }
+
+  .category-row,
+  .levels-grid {
+    min-width: 640px;
   }
 }
 
