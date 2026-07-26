@@ -165,25 +165,58 @@ export const saveDraft = async (
   draft: Omit<GameDraft, 'createdAt' | 'id' | 'updatedAt'> & Partial<GameDraft>,
 ) => {
   const client = requireSupabase()
+  const draftId = draft.id ?? crypto.randomUUID()
+  const savedAt = new Date().toISOString()
   const payload = {
     categories: draft.categories ?? createDefaultCategories(),
     clues: draft.clues ?? {},
     content: draft.content ?? '',
+    id: draftId,
     title: draft.title,
-    updated_at: new Date().toISOString(),
+    updated_at: savedAt,
   }
-  const query = draft.id
-    ? client.from('game_drafts').update(payload).eq('id', draft.id)
-    : client.from('game_drafts').insert(payload)
-  const { data, error } = await query
-    .select('id,title,content,categories,clues,created_at,updated_at')
-    .single()
+  const { error } = await client.from('game_drafts').upsert(payload)
 
   if (error) {
     throwSupabaseError(error)
   }
 
-  return mapDraftRow(data as DraftRow)
+  return (
+    (await getDraftById(draftId)) ?? {
+      categories: payload.categories,
+      clues: payload.clues,
+      content: payload.content,
+      createdAt: savedAt,
+      id: draftId,
+      title: payload.title,
+      updatedAt: savedAt,
+    }
+  )
+}
+
+const renumberDrafts = async () => {
+  const client = requireSupabase()
+  const drafts = await getDrafts()
+
+  for (const [index, draft] of drafts.entries()) {
+    const nextTitle = `Раунд ${index + 1}`
+
+    if (draft.title === nextTitle) {
+      continue
+    }
+
+    const { error } = await client
+      .from('game_drafts')
+      .update({
+        title: nextTitle,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', draft.id)
+
+    if (error) {
+      throwSupabaseError(error)
+    }
+  }
 }
 
 export const deleteDraft = async (draftId: string) => {
@@ -193,6 +226,8 @@ export const deleteDraft = async (draftId: string) => {
   if (error) {
     throwSupabaseError(error)
   }
+
+  await renumberDrafts()
 }
 
 export const getCompletedClues = async (draftId: string) => {

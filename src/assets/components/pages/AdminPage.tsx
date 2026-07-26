@@ -64,11 +64,13 @@ function AdminPage() {
                   </Link>
 
                   <button
-                    className="delete-draft-button"
+                    aria-label={`Удалить ${draft.title}`}
+                    className="draft-card-delete-button"
+                    title="Удалить драфт"
                     type="button"
                     onClick={() => void handleDeleteDraft(draft.id)}
                   >
-                    Удалить драфт
+                    Удалить
                   </button>
                 </article>
               ))
