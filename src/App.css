@@ -26,7 +26,7 @@
   overflow-x: hidden;
   display: grid;
   place-items: start center;
-  padding: clamp(16px, 4vw, 48px);
+  padding: clamp(10px, 2vw, 24px);
   box-sizing: border-box;
   color: #f8fbff;
   background:
@@ -258,7 +258,11 @@
 }
 
 .create-shell {
+  width: min(100%, 1440px);
+  height: calc(100svh - clamp(20px, 4vw, 48px));
+  grid-template-rows: auto minmax(0, 1fr);
   align-content: start;
+  overflow: hidden;
 }
 
 .create-header {
@@ -331,15 +335,17 @@
 }
 
 .create-content {
+  min-height: 0;
   display: grid;
-  gap: 16px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: clamp(8px, 1.4vh, 14px);
   text-align: left;
 }
 
 .create-content h1 {
   margin: 0;
   color: #ffffff;
-  font-size: clamp(2rem, 5vw, 4.2rem);
+  font-size: clamp(1.4rem, 3vw, 2.6rem);
   line-height: 0.95;
   font-weight: 900;
   letter-spacing: 0;
@@ -382,20 +388,33 @@
 }
 
 .jeopardy-builder {
+  min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .builder-board {
   align-self: start;
   min-width: 0;
+  height: 100%;
   overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   background: #071026;
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.24);
+}
+
+.levels-grid {
+  min-height: 0;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+}
+
+.level-tile {
+  min-height: 0;
 }
 
 .category-row,
@@ -407,7 +426,7 @@
 .category-input {
   display: grid;
   min-width: 0;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid rgba(9, 17, 40, 0.95);
   background: linear-gradient(180deg, #183c98, #0d276e);
 }
@@ -423,7 +442,7 @@
 .category-input input {
   width: 100%;
   min-width: 0;
-  min-height: 38px;
+  min-height: 34px;
   box-sizing: border-box;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
@@ -447,7 +466,6 @@
 .level-tile {
   display: grid;
   place-items: center;
-  min-height: clamp(64px, 10vw, 92px);
   border: 1px solid rgba(9, 17, 40, 0.95);
   color: #ffd957;
   background: linear-gradient(180deg, #163bb4, #08278a);
@@ -480,15 +498,37 @@
 }
 
 .clue-editor {
-  align-self: start;
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
   display: grid;
   align-content: start;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-  padding: 18px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 14px 22px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.09);
+  scrollbar-color: rgba(255, 218, 102, 0.8) rgba(5, 13, 31, 0.6);
+  scrollbar-width: thin;
+}
+
+.clue-editor::-webkit-scrollbar {
+  width: 8px;
+}
+
+.clue-editor::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(5, 13, 31, 0.6);
+}
+
+.clue-editor::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(5, 13, 31, 0.6);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff4a8, #ffbf2e);
 }
 
 .clue-editor span {
@@ -507,7 +547,7 @@
 
 .clue-editor textarea {
   width: 100%;
-  min-height: 150px;
+  min-height: clamp(90px, 17vh, 130px);
   box-sizing: border-box;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
@@ -540,7 +580,7 @@
 
 .clue-answer-field input {
   width: 100%;
-  min-height: 44px;
+  min-height: 38px;
   box-sizing: border-box;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
@@ -557,13 +597,14 @@
 
 .media-uploader {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  min-height: 0;
 }
 
 .media-upload-button {
   display: grid;
   place-items: center;
-  min-height: 44px;
+  min-height: 38px;
   border: 1px dashed rgba(255, 218, 102, 0.65);
   border-radius: 8px;
   color: #ffda66;
@@ -582,18 +623,20 @@
 
 .media-preview {
   display: grid;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
-  background: rgba(5, 13, 31, 0.42);
+  gap: 8px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .media-preview img {
   width: 100%;
-  max-height: 160px;
-  object-fit: cover;
-  border-radius: 6px;
+  max-height: clamp(140px, 26vh, 260px);
+  display: block;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .media-preview div {
@@ -613,6 +656,7 @@
 
 .media-preview button {
   min-height: 36px;
+  margin-bottom: 10px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 8px;
   color: #ffffff;
