@@ -3,6 +3,7 @@ export type ClueLevel = 100 | 200 | 300 | 400 | 500
 export type ClueDraft = {
   answer: string
   mediaName?: string
+  mediaPath?: string
   mediaUrl?: string
   question: string
 }
@@ -64,6 +65,7 @@ const normalizeClue = (value: unknown): ClueDraft => {
   return {
     answer: typeof clue.answer === 'string' ? clue.answer : '',
     mediaName: typeof clue.mediaName === 'string' ? clue.mediaName : undefined,
+    mediaPath: typeof clue.mediaPath === 'string' ? clue.mediaPath : undefined,
     mediaUrl: typeof clue.mediaUrl === 'string' ? clue.mediaUrl : undefined,
     question: typeof clue.question === 'string' ? clue.question : '',
   }

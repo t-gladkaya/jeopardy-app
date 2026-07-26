@@ -613,6 +613,11 @@
   cursor: pointer;
 }
 
+.media-upload-button.is-uploading {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .media-upload-button input {
   position: absolute;
   width: 1px;
@@ -629,6 +634,14 @@
   border: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.media-error {
+  margin: 0;
+  color: #ff8fa5;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .media-preview img {

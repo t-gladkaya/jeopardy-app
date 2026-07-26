@@ -3,7 +3,6 @@ import type { ChangeEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   CLUE_LEVELS,
-  ClueDraft,
   ClueLevel,
   createDefaultCategories,
   createEmptyClue,
@@ -15,6 +14,8 @@ import {
   isClueFilled,
   saveDraft,
 } from '../../data/drafts'
+import type { ClueDraft } from '../../data/drafts'
+import { deleteQuestionMedia, uploadQuestionMedia } from '../../data/media'
 
 function CreateGamePage() {
   const { draftId } = useParams()
@@ -25,6 +26,8 @@ function CreateGamePage() {
   const [clues, setClues] = useState<Record<string, ClueDraft>>({})
   const [selectedCategoryIndex, setSelectedCategoryIndex] = useState(0)
   const [selectedLevel, setSelectedLevel] = useState<ClueLevel>(100)
+  const [isMediaUploading, setIsMediaUploading] = useState(false)
+  const [mediaError, setMediaError] = useState('')
 
   const selectedClueKey = useMemo(
     () => getClueKey(selectedCategoryIndex, selectedLevel),
@@ -63,6 +66,10 @@ function CreateGamePage() {
     setSelectedLevel(100)
   }, [draftId, navigate])
 
+  useEffect(() => {
+    setMediaError('')
+  }, [selectedClueKey])
+
   const handleCategoryChange = (categoryIndex: number, value: string) => {
     setCategories((currentCategories) =>
       currentCategories.map((category, index) => (index === categoryIndex ? value : category)),
@@ -80,28 +87,36 @@ function CreateGamePage() {
     }))
   }
 
-  const handleMediaChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleMediaChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
+    event.target.value = ''
 
     if (!file) {
       return
     }
 
-    const reader = new FileReader()
-    reader.addEventListener('load', () => {
-      if (typeof reader.result === 'string') {
-        updateSelectedClue({
-          mediaName: file.name,
-          mediaUrl: reader.result,
-        })
+    setIsMediaUploading(true)
+    setMediaError('')
+
+    try {
+      if (selectedClue.mediaPath) {
+        await deleteQuestionMedia(selectedClue.mediaPath)
       }
-    })
-    reader.readAsDataURL(file)
+
+      const uploadedMedia = await uploadQuestionMedia(file)
+      updateSelectedClue(uploadedMedia)
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : 'Не удалось загрузить изображение.')
+    } finally {
+      setIsMediaUploading(false)
+    }
   }
 
-  const handleRemoveMedia = () => {
+  const handleRemoveMedia = async () => {
+    await deleteQuestionMedia(selectedClue.mediaPath)
     updateSelectedClue({
       mediaName: undefined,
+      mediaPath: undefined,
       mediaUrl: undefined,
     })
   }
@@ -211,10 +226,17 @@ function CreateGamePage() {
               </label>
 
               <div className="media-uploader">
-                <label className="media-upload-button">
-                  Добавить изображение
-                  <input accept="image/*" type="file" onChange={handleMediaChange} />
+                <label className={`media-upload-button${isMediaUploading ? ' is-uploading' : ''}`}>
+                  {isMediaUploading ? 'Загрузка...' : 'Добавить изображение'}
+                  <input
+                    accept="image/*"
+                    disabled={isMediaUploading}
+                    type="file"
+                    onChange={handleMediaChange}
+                  />
                 </label>
+
+                {mediaError && <p className="media-error">{mediaError}</p>}
 
                 {selectedClue.mediaUrl && (
                   <div className="media-preview">
