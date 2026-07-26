@@ -1,145 +1,166 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
-
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-}
-
-#center {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1366px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
-}
-
-#next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-#next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
-}
-
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
-}
-
-.ticks {
+.landing-page {
   position: relative;
+  isolation: isolate;
   width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 4vw, 48px);
+  box-sizing: border-box;
+  color: #f8fbff;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 218, 102, 0.2), transparent 26%),
+    radial-gradient(circle at 80% 76%, rgba(55, 211, 190, 0.16), transparent 30%),
+    linear-gradient(135deg, #070b1a 0%, #102b69 52%, #1a0b3d 100%);
+}
 
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
+.landing-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: clamp(34px, 5vw, 58px) clamp(34px, 5vw, 58px);
+  mask-image: radial-gradient(circle, #000 0%, transparent 76%);
+}
+
+.landing-card {
+  width: min(100%, 1000px);
+  max-height: calc(100svh - clamp(32px, 8vw, 96px));
+  display: grid;
+  place-items: center;
+  justify-items: center;
+  align-content: center;
+  gap: clamp(12px, 2.2vh, 22px);
+  padding: clamp(24px, 6vw, 56px);
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(5, 13, 31, 0.72);
+  box-shadow: 0 26px 90px rgba(0, 0, 0, 0.42);
+  text-align: center;
+  backdrop-filter: blur(18px);
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: clamp(58px, 10vw, 90px);
+  height: clamp(58px, 10vw, 90px);
+  border: 3px solid rgba(255, 218, 102, 0.9);
+  border-radius: 50%;
+  color: #ffda66;
+  background: linear-gradient(180deg, #173ca0, #0b2468);
+  box-shadow: 0 0 34px rgba(255, 218, 102, 0.2);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2rem, 5vw, 3.8rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.landing-kicker {
+  margin: 0;
+  color: #ffda66;
+  font-size: clamp(0.30rem, 1.7vw, 0.9rem);
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.landing-card h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2.4rem, 7vw, 5.2rem);
+  line-height: 0.9;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  text-shadow: 0 10px 34px rgba(0, 0, 0, 0.42);
+}
+
+.landing-text {
+  max-width: 620px;
+  margin: 0;
+  color: #d8e6ff;
+  font-size: clamp(0.95rem, 2.3vw, 1.2rem);
+  line-height: 1.45;
+}
+
+.landing-actions {
+  width: min(100%, 480px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  justify-content: center;
+  gap: 12px;
+  margin-top: clamp(4px, 1vh, 10px);
+}
+
+.start-button,
+.admin-button {
+  min-height: clamp(46px, 8vh, 58px);
+  padding: 0 18px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.start-button {
+  border: 0;
+  color: #17204a;
+  background: linear-gradient(180deg, #fff4a8, #ffbf2e);
+  box-shadow: 0 14px 36px rgba(255, 191, 46, 0.32);
+}
+
+.admin-button {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.start-button:hover,
+.start-button:focus-visible,
+.admin-button:hover,
+.admin-button:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.start-button:hover,
+.start-button:focus-visible {
+  background: linear-gradient(180deg, #fff8c8, #ffd257);
+}
+
+.admin-button:hover,
+.admin-button:focus-visible {
+  border-color: rgba(255, 218, 102, 0.8);
+}
+
+@media (max-width: 560px) {
+  .landing-card {
+    padding: 22px;
   }
 
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
+  .landing-actions {
+    grid-template-columns: 1fr;
   }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
+}
+
+@media (max-height: 620px) {
+  .landing-card {
+    gap: 10px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .landing-text {
+    display: none;
   }
 }
