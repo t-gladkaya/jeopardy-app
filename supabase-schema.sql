@@ -11,10 +11,13 @@ create table if not exists public.game_drafts (
 create table if not exists public.game_teams (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  score integer not null default 0,
+  score bigint not null default 0,
   sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
+
+alter table public.game_teams
+alter column score type bigint using score::bigint;
 
 create table if not exists public.completed_clues (
   draft_id uuid not null references public.game_drafts(id) on delete cascade,

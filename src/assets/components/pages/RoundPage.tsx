@@ -31,8 +31,6 @@ function RoundPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const totalCluesCount = CLUE_LEVELS.length * (draft?.categories.length ?? 0)
-  const isRoundComplete = Boolean(draft && completedClues.length >= totalCluesCount)
   const nextRoundNumber = roundIndex + 2
   const hasNextRound = nextRoundNumber <= drafts.length
 
@@ -200,15 +198,13 @@ function RoundPage() {
             </p>
           </div>
 
-          {isRoundComplete && (
-            <button
-              className="save-draft-button"
-              type="button"
-              onClick={() => navigate(hasNextRound ? `/game/round/${nextRoundNumber}` : '/admin')}
-            >
-              {hasNextRound ? 'Следующий раунд' : 'Завершить игру'}
-            </button>
-          )}
+          <button
+            className="save-draft-button"
+            type="button"
+            onClick={() => navigate(hasNextRound ? `/game/round/${nextRoundNumber}` : '/admin')}
+          >
+            {hasNextRound ? 'Следующий раунд' : 'Завершить игру'}
+          </button>
         </header>
 
         {error && <p className="media-error">{error}</p>}

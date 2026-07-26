@@ -30,6 +30,10 @@ type DraftRow = {
   updated_at: string
 }
 
+type SupabaseError = {
+  message?: string
+}
+
 export const CLUE_LEVELS: ClueLevel[] = [100, 200, 300, 400, 500]
 export const CATEGORY_COUNT = 5
 
@@ -39,6 +43,10 @@ const requireSupabase = () => {
   }
 
   return supabase
+}
+
+const throwSupabaseError = (error: SupabaseError) => {
+  throw new Error(error.message || 'Не удалось выполнить запрос к Supabase.')
 }
 
 export const createDefaultCategories = () => {
@@ -127,7 +135,7 @@ export const getDrafts = async (): Promise<GameDraft[]> => {
     .order('created_at', { ascending: true })
 
   if (error) {
-    throw error
+    throwSupabaseError(error)
   }
 
   return (data ?? []).map((row) => mapDraftRow(row as DraftRow))
@@ -142,7 +150,7 @@ export const getDraftById = async (draftId: string) => {
     .maybeSingle()
 
   if (error) {
-    throw error
+    throwSupabaseError(error)
   }
 
   return data ? mapDraftRow(data as DraftRow) : undefined
@@ -172,7 +180,7 @@ export const saveDraft = async (
     .single()
 
   if (error) {
-    throw error
+    throwSupabaseError(error)
   }
 
   return mapDraftRow(data as DraftRow)
@@ -183,7 +191,7 @@ export const deleteDraft = async (draftId: string) => {
   const { error } = await client.from('game_drafts').delete().eq('id', draftId)
 
   if (error) {
-    throw error
+    throwSupabaseError(error)
   }
 }
 
@@ -195,7 +203,7 @@ export const getCompletedClues = async (draftId: string) => {
     .eq('draft_id', draftId)
 
   if (error) {
-    throw error
+    throwSupabaseError(error)
   }
 
   return (data ?? []).map((item) => item.clue_key as string)
@@ -206,7 +214,7 @@ export const saveCompletedClues = async (draftId: string, completedClues: string
   const { error: deleteError } = await client.from('completed_clues').delete().eq('draft_id', draftId)
 
   if (deleteError) {
-    throw deleteError
+    throwSupabaseError(deleteError)
   }
 
   if (completedClues.length === 0) {
@@ -221,7 +229,7 @@ export const saveCompletedClues = async (draftId: string, completedClues: string
   )
 
   if (error) {
-    throw error
+    throwSupabaseError(error)
   }
 }
 
@@ -230,6 +238,6 @@ export const resetCompletedClues = async () => {
   const { error } = await client.from('completed_clues').delete().not('draft_id', 'is', null)
 
   if (error) {
-    throw error
+    throwSupabaseError(error)
   }
 }

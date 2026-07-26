@@ -4,6 +4,19 @@ import { resetCompletedClues } from '../../data/drafts'
 import { createDefaultTeams, getTeams, saveTeams } from '../../data/teams'
 import type { Team } from '../../data/teams'
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    return typeof message === 'string' ? message : fallback
+  }
+
+  return fallback
+}
+
 function TeamSetupPage() {
   const navigate = useNavigate()
   const [teams, setTeams] = useState<Team[]>([])
@@ -16,9 +29,15 @@ function TeamSetupPage() {
     const loadTeams = async () => {
       try {
         const savedTeams = await getTeams()
-        setTeams(savedTeams.length > 0 ? savedTeams : createDefaultTeams())
+        const nextTeams = savedTeams.length > 0 ? savedTeams : createDefaultTeams()
+
+        setTeams(nextTeams)
+
+        if (savedTeams.length === 0) {
+          await saveTeams(nextTeams)
+        }
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить команды.')
+        setError(getErrorMessage(loadError, 'Не удалось загрузить команды.'))
         setTeams(createDefaultTeams())
       } finally {
         setIsLoading(false)
@@ -27,6 +46,22 @@ function TeamSetupPage() {
 
     void loadTeams()
   }, [])
+
+  useEffect(() => {
+    if (isLoading || isSaving || teams.length === 0) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void saveTeams(teams)
+        .then(() => setError(''))
+        .catch((saveError) => {
+          setError(getErrorMessage(saveError, 'Не удалось сохранить команды.'))
+        })
+    }, 500)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [isLoading, isSaving, teams])
 
   useEffect(() => {
     if (!isScoreReset) {
@@ -76,7 +111,7 @@ function TeamSetupPage() {
       await resetCompletedClues()
       setIsScoreReset(true)
     } catch (resetError) {
-      setError(resetError instanceof Error ? resetError.message : 'Не удалось сбросить счет.')
+      setError(getErrorMessage(resetError, 'Не удалось сбросить счет.'))
     } finally {
       setIsSaving(false)
     }
@@ -96,7 +131,7 @@ function TeamSetupPage() {
       await saveTeams(normalizedTeams)
       navigate('/game/round/1')
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Не удалось сохранить команды.')
+      setError(getErrorMessage(saveError, 'Не удалось сохранить команды.'))
     } finally {
       setIsSaving(false)
     }
