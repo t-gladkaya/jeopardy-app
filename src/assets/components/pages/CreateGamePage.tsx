@@ -112,7 +112,7 @@ function CreateGamePage() {
       clues,
       content: draftSummary,
       id: currentDraftId,
-      title: title.trim() || getNextDraftTitle(),
+      title,
     })
 
     setCurrentDraftId(savedDraft.id)
@@ -148,11 +148,6 @@ function CreateGamePage() {
         <div className="create-content">
           <p className="landing-kicker">Конструктор</p>
           <h1 id="create-title">{title}</h1>
-
-          <label className="draft-field draft-title-field">
-            <span>Название драфта</span>
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
 
           <section className="jeopardy-builder" aria-label="Конструктор игрового поля">
             <div className="builder-board">
