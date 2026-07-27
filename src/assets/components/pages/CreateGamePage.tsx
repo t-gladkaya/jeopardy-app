@@ -16,6 +16,9 @@ import {
 import type { ClueDraft, ClueLevel } from '../../data/drafts'
 import { deleteQuestionMedia, uploadQuestionMedia } from '../../data/media'
 
+const getDeleteDraftConfirmation = (draftTitle: string) =>
+  `Удалить драфт "${draftTitle}"? Это действие нельзя отменить.`
+
 function CreateGamePage() {
   const { draftId } = useParams()
   const navigate = useNavigate()
@@ -219,6 +222,10 @@ function CreateGamePage() {
   }
 
   const handleDeleteDraft = async () => {
+    if (!window.confirm(getDeleteDraftConfirmation(title))) {
+      return
+    }
+
     try {
       if (currentDraftId) {
         await deleteDraft(currentDraftId)

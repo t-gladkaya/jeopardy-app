@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { deleteDraft, getDrafts } from '../../data/drafts'
 import type { GameDraft } from '../../data/drafts'
 
+const getDeleteDraftConfirmation = (draftTitle: string) =>
+  `Удалить драфт "${draftTitle}"? Это действие нельзя отменить.`
+
 function AdminPage() {
   const [drafts, setDrafts] = useState<GameDraft[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -24,8 +27,12 @@ function AdminPage() {
     void loadDrafts()
   }, [])
 
-  const handleDeleteDraft = async (draftId: string) => {
-    await deleteDraft(draftId)
+  const handleDeleteDraft = async (draft: GameDraft) => {
+    if (!window.confirm(getDeleteDraftConfirmation(draft.title))) {
+      return
+    }
+
+    await deleteDraft(draft.id)
     await loadDrafts()
   }
 
@@ -68,7 +75,7 @@ function AdminPage() {
                     className="draft-card-delete-button"
                     title="Удалить драфт"
                     type="button"
-                    onClick={() => void handleDeleteDraft(draft.id)}
+                    onClick={() => void handleDeleteDraft(draft)}
                   >
                     Удалить
                   </button>
