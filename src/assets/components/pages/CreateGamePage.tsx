@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { ChangeEvent } from 'react'
+import type { CSSProperties, ChangeEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   CLUE_LEVELS,
@@ -23,6 +23,7 @@ function CreateGamePage() {
   const [title, setTitle] = useState('Раунд')
   const [categories, setCategories] = useState(createDefaultCategories)
   const [clues, setClues] = useState<Record<string, ClueDraft>>({})
+  const [clueLevels, setClueLevels] = useState<ClueLevel[]>(CLUE_LEVELS)
   const [selectedCategoryIndex, setSelectedCategoryIndex] = useState(0)
   const [selectedLevel, setSelectedLevel] = useState<ClueLevel>(100)
   const [isLoading, setIsLoading] = useState(true)
@@ -39,8 +40,12 @@ function CreateGamePage() {
   const filledCluesCount = Object.values(clues).filter(isClueFilled).length
   const draftSummary =
     filledCluesCount > 0
-      ? `Заполнено вопросов: ${filledCluesCount} из ${categories.length * CLUE_LEVELS.length}`
+      ? `Заполнено вопросов: ${filledCluesCount} из ${categories.length * clueLevels.length}`
       : 'Содержимое пока не заполнено'
+  const boardGridStyle = {
+    '--category-count': categories.length,
+    '--level-count': clueLevels.length,
+  } as CSSProperties
 
   useEffect(() => {
     const loadDraft = async () => {
@@ -53,6 +58,7 @@ function CreateGamePage() {
           setTitle(await getNextDraftTitle())
           setCategories(createDefaultCategories())
           setClues({})
+          setClueLevels(CLUE_LEVELS)
           setSelectedCategoryIndex(0)
           setSelectedLevel(100)
           return
@@ -69,8 +75,9 @@ function CreateGamePage() {
         setTitle(savedDraft.title)
         setCategories(savedDraft.categories)
         setClues(savedDraft.clues)
+        setClueLevels(savedDraft.levels)
         setSelectedCategoryIndex(0)
-        setSelectedLevel(100)
+        setSelectedLevel(savedDraft.levels[0] ?? 100)
       } catch (error) {
         setPageError(error instanceof Error ? error.message : 'Не удалось загрузить драфт.')
       } finally {
@@ -89,6 +96,58 @@ function CreateGamePage() {
     setCategories((currentCategories) =>
       currentCategories.map((category, index) => (index === categoryIndex ? value : category)),
     )
+  }
+
+  const handleRemoveCategory = (removedCategoryIndex: number) => {
+    if (categories.length <= 1) {
+      return
+    }
+
+    const nextCategoryIndex = Math.min(removedCategoryIndex, categories.length - 2)
+
+    setCategories((currentCategories) =>
+      currentCategories.filter((_, categoryIndex) => categoryIndex !== removedCategoryIndex),
+    )
+    setClues((currentClues) =>
+      Object.entries(currentClues).reduce<Record<string, ClueDraft>>((nextClues, [key, clue]) => {
+        const [categoryIndexValue, levelValue] = key.split('-')
+        const categoryIndex = Number(categoryIndexValue)
+        const level = Number(levelValue)
+
+        if (!Number.isInteger(categoryIndex) || !Number.isInteger(level) || categoryIndex === removedCategoryIndex) {
+          return nextClues
+        }
+
+        const nextCategoryKey = categoryIndex > removedCategoryIndex ? categoryIndex - 1 : categoryIndex
+        nextClues[getClueKey(nextCategoryKey, level)] = clue
+        return nextClues
+      }, {}),
+    )
+    setSelectedCategoryIndex(nextCategoryIndex)
+  }
+
+  const handleRemoveLevel = (removedLevel: ClueLevel) => {
+    if (clueLevels.length <= 1) {
+      return
+    }
+
+    const nextLevels = clueLevels.filter((level) => level !== removedLevel)
+    const removedLevelIndex = clueLevels.indexOf(removedLevel)
+    const nextLevelIndex = Math.min(Math.max(removedLevelIndex, 0), nextLevels.length - 1)
+
+    setClueLevels(nextLevels)
+    setClues((currentClues) =>
+      Object.entries(currentClues).reduce<Record<string, ClueDraft>>((nextClues, [key, clue]) => {
+        const [, levelValue] = key.split('-')
+
+        if (Number(levelValue) !== removedLevel) {
+          nextClues[key] = clue
+        }
+
+        return nextClues
+      }, {}),
+    )
+    setSelectedLevel(nextLevels[nextLevelIndex] ?? 100)
   }
 
   const updateSelectedClue = (updates: Partial<ClueDraft>) => {
@@ -146,6 +205,7 @@ function CreateGamePage() {
         clues,
         content: draftSummary,
         id: currentDraftId,
+        levels: clueLevels,
         title,
       })
 
@@ -201,21 +261,30 @@ function CreateGamePage() {
           {!isLoading && !pageError && (
             <section className="jeopardy-builder" aria-label="Конструктор игрового поля">
               <div className="builder-board">
-                <div className="category-row">
+                <div className="category-row" style={boardGridStyle}>
                   {categories.map((category, categoryIndex) => (
-                    <label className="category-input" key={categoryIndex}>
+                    <div className="category-input" key={categoryIndex}>
                       <input
                         aria-label={getCategoryPlaceholder(categoryIndex)}
                         placeholder={getCategoryPlaceholder(categoryIndex)}
                         value={category}
                         onChange={(event) => handleCategoryChange(categoryIndex, event.target.value)}
                       />
-                    </label>
+                      <button
+                        aria-label={`Удалить ${category || getCategoryPlaceholder(categoryIndex)}`}
+                        className="builder-remove-button"
+                        disabled={categories.length <= 1}
+                        type="button"
+                        onClick={() => handleRemoveCategory(categoryIndex)}
+                      >
+                        Удалить
+                      </button>
+                    </div>
                   ))}
                 </div>
 
-                <div className="levels-grid">
-                  {CLUE_LEVELS.flatMap((level) =>
+                <div className="levels-grid" style={boardGridStyle}>
+                  {clueLevels.flatMap((level) =>
                     categories.map((_, categoryIndex) => {
                       const clueKey = getClueKey(categoryIndex, level)
                       const isSelected = selectedCategoryIndex === categoryIndex && selectedLevel === level
@@ -236,6 +305,20 @@ function CreateGamePage() {
                       )
                     }),
                   )}
+                </div>
+                <div className="level-remove-row" style={boardGridStyle}>
+                  {clueLevels.map((level) => (
+                    <button
+                      aria-label={`Удалить ряд на ${level}`}
+                      className="builder-remove-button"
+                      disabled={clueLevels.length <= 1}
+                      key={level}
+                      type="button"
+                      onClick={() => handleRemoveLevel(level)}
+                    >
+                      Удалить ряд {level}
+                    </button>
+                  ))}
                 </div>
               </div>
 

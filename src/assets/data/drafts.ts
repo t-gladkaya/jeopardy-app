@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 
-export type ClueLevel = 100 | 200 | 300 | 400 | 500
+export type ClueLevel = number
 
 export type ClueDraft = {
   answer: string
@@ -16,6 +16,7 @@ export type GameDraft = {
   content: string
   createdAt: string
   id: string
+  levels: ClueLevel[]
   title: string
   updatedAt: string
 }
@@ -26,6 +27,7 @@ type DraftRow = {
   content: string | null
   created_at: string
   id: string
+  levels?: unknown
   title: string
   updated_at: string
 }
@@ -47,6 +49,16 @@ const requireSupabase = () => {
 
 const throwSupabaseError = (error: SupabaseError) => {
   throw new Error(error.message || 'Не удалось выполнить запрос к Supabase.')
+}
+
+const isMissingLevelsColumnError = (error?: SupabaseError | null) => {
+  return Boolean(error?.message?.toLowerCase().includes('levels') && error.message.toLowerCase().includes('column'))
+}
+
+const throwMissingLevelsColumnError = () => {
+  throw new Error(
+    'В таблице game_drafts нет колонки levels. Выполните миграцию: alter table public.game_drafts add column if not exists levels jsonb not null default \'[100,200,300,400,500]\'::jsonb;',
+  )
 }
 
 export const createDefaultCategories = () => {
@@ -72,6 +84,19 @@ export const isClueFilled = (clue?: ClueDraft) => {
 
 const isStringArray = (value: unknown) => {
   return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+const isClueLevel = (value: unknown): value is ClueLevel => {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0
+}
+
+const normalizeClueLevels = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return CLUE_LEVELS
+  }
+
+  const levels = value.filter(isClueLevel)
+  return levels.length > 0 ? levels : CLUE_LEVELS
 }
 
 const normalizeClue = (value: unknown): ClueDraft => {
@@ -113,15 +138,16 @@ const normalizeClues = (value: unknown) => {
 const mapDraftRow = (row: DraftRow): GameDraft => {
   const defaultCategories = createDefaultCategories()
   const categories = isStringArray(row.categories)
-    ? [...row.categories, ...defaultCategories].slice(0, CATEGORY_COUNT)
+    ? row.categories.slice(0, CATEGORY_COUNT)
     : defaultCategories
 
   return {
-    categories,
+    categories: categories.length > 0 ? categories : defaultCategories,
     clues: normalizeClues(row.clues),
     content: row.content ?? '',
     createdAt: row.created_at,
     id: row.id,
+    levels: normalizeClueLevels(row.levels),
     title: row.title,
     updatedAt: row.updated_at,
   }
@@ -131,8 +157,21 @@ export const getDrafts = async (): Promise<GameDraft[]> => {
   const client = requireSupabase()
   const { data, error } = await client
     .from('game_drafts')
-    .select('id,title,content,categories,clues,created_at,updated_at')
+    .select('id,title,content,categories,clues,levels,created_at,updated_at')
     .order('created_at', { ascending: true })
+
+  if (isMissingLevelsColumnError(error)) {
+    const { data: legacyData, error: legacyError } = await client
+      .from('game_drafts')
+      .select('id,title,content,categories,clues,created_at,updated_at')
+      .order('created_at', { ascending: true })
+
+    if (legacyError) {
+      throwSupabaseError(legacyError)
+    }
+
+    return (legacyData ?? []).map((row) => mapDraftRow(row as DraftRow))
+  }
 
   if (error) {
     throwSupabaseError(error)
@@ -145,9 +184,23 @@ export const getDraftById = async (draftId: string) => {
   const client = requireSupabase()
   const { data, error } = await client
     .from('game_drafts')
-    .select('id,title,content,categories,clues,created_at,updated_at')
+    .select('id,title,content,categories,clues,levels,created_at,updated_at')
     .eq('id', draftId)
     .maybeSingle()
+
+  if (isMissingLevelsColumnError(error)) {
+    const { data: legacyData, error: legacyError } = await client
+      .from('game_drafts')
+      .select('id,title,content,categories,clues,created_at,updated_at')
+      .eq('id', draftId)
+      .maybeSingle()
+
+    if (legacyError) {
+      throwSupabaseError(legacyError)
+    }
+
+    return legacyData ? mapDraftRow(legacyData as DraftRow) : undefined
+  }
 
   if (error) {
     throwSupabaseError(error)
@@ -172,10 +225,15 @@ export const saveDraft = async (
     clues: draft.clues ?? {},
     content: draft.content ?? '',
     id: draftId,
+    levels: draft.levels ?? CLUE_LEVELS,
     title: draft.title,
     updated_at: savedAt,
   }
   const { error } = await client.from('game_drafts').upsert(payload)
+
+  if (isMissingLevelsColumnError(error)) {
+    throwMissingLevelsColumnError()
+  }
 
   if (error) {
     throwSupabaseError(error)
@@ -188,6 +246,7 @@ export const saveDraft = async (
       content: payload.content,
       createdAt: savedAt,
       id: draftId,
+      levels: payload.levels,
       title: payload.title,
       updatedAt: savedAt,
     }

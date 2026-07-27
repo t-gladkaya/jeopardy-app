@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  CLUE_LEVELS,
   getCategoryPlaceholder,
   getClueKey,
   getCompletedClues,
@@ -33,6 +33,12 @@ function RoundPage() {
 
   const nextRoundNumber = roundIndex + 2
   const hasNextRound = nextRoundNumber <= drafts.length
+  const boardGridStyle = draft
+    ? ({
+        '--category-count': draft.categories.length,
+        '--level-count': draft.levels.length,
+      } as CSSProperties)
+    : undefined
 
   useEffect(() => {
     const loadRound = async () => {
@@ -232,7 +238,7 @@ function RoundPage() {
         </div>
 
         <section className="play-board" aria-label="Таблица раунда">
-          <div className="play-category-row">
+          <div className="play-category-row" style={boardGridStyle}>
             {draft.categories.map((category, categoryIndex) => (
               <div className="play-category" key={categoryIndex}>
                 {category || getCategoryPlaceholder(categoryIndex)}
@@ -240,8 +246,8 @@ function RoundPage() {
             ))}
           </div>
 
-          <div className="play-levels-grid">
-            {CLUE_LEVELS.flatMap((level) =>
+          <div className="play-levels-grid" style={boardGridStyle}>
+            {draft.levels.flatMap((level) =>
               draft.categories.map((_, categoryIndex) => {
                 const clueKey = getClueKey(categoryIndex, level)
                 const isCompleted = completedClues.includes(clueKey)

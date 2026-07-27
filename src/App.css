@@ -434,7 +434,7 @@
   height: 100%;
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   background: #071026;
@@ -443,7 +443,7 @@
 
 .levels-grid {
   min-height: 0;
-  grid-template-rows: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(var(--level-count, 5), minmax(0, 1fr));
 }
 
 .level-tile {
@@ -453,11 +453,12 @@
 .category-row,
 .levels-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  grid-template-columns: repeat(var(--category-count, 5), minmax(140px, 1fr));
 }
 
 .category-input {
   display: grid;
+  gap: 6px;
   min-width: 0;
   padding: 8px;
   border: 1px solid rgba(9, 17, 40, 0.95);
@@ -494,6 +495,43 @@
 .category-input input:focus {
   border-color: rgba(255, 218, 102, 0.85);
   outline: none;
+}
+
+.builder-remove-button {
+  min-width: 0;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #ffd9e1;
+  background: rgba(255, 86, 119, 0.16);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.builder-remove-button:hover,
+.builder-remove-button:focus-visible {
+  border-color: rgba(255, 143, 165, 0.8);
+  outline: none;
+  color: #ffffff;
+  background: rgba(255, 86, 119, 0.26);
+}
+
+.builder-remove-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.level-remove-row {
+  display: grid;
+  grid-template-columns: repeat(var(--level-count, 5), minmax(96px, 1fr));
+  gap: 6px;
+  padding: 8px;
+  overflow-x: auto;
+  background: rgba(5, 13, 31, 0.72);
 }
 
 .level-tile {
@@ -971,12 +1009,12 @@
 .play-category-row,
 .play-levels-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--category-count, 5), minmax(0, 1fr));
 }
 
 .play-levels-grid {
   min-height: 0;
-  grid-template-rows: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(var(--level-count, 5), minmax(0, 1fr));
 }
 
 .play-category,
@@ -1336,7 +1374,7 @@
 
   .category-row,
   .levels-grid {
-    min-width: 640px;
+    min-width: max(100%, calc(var(--category-count, 5) * 128px));
   }
 
   .round-header {

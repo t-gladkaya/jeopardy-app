@@ -3,10 +3,14 @@ create table if not exists public.game_drafts (
   title text not null,
   content text not null default '',
   categories jsonb not null default '[]'::jsonb,
+  levels jsonb not null default '[100,200,300,400,500]'::jsonb,
   clues jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.game_drafts
+add column if not exists levels jsonb not null default '[100,200,300,400,500]'::jsonb;
 
 create table if not exists public.game_teams (
   id uuid primary key default gen_random_uuid(),
