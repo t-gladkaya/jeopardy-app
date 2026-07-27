@@ -1147,14 +1147,17 @@
 }
 
 .clue-question {
+  width: min(100%, 900px);
   max-width: 900px;
   max-height: 24vh;
   overflow: hidden;
   margin: 0;
   color: #ffffff;
-  font-size: clamp(1.35rem, 3.4vw, 2.9rem);
+  font-size: clamp(0.95rem, 2.4vw, 2.15rem);
   font-weight: 900;
-  line-height: 1.18;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .clue-hint {
